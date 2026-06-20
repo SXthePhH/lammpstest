@@ -29,6 +29,8 @@ class FixNHMiddle : public FixNH {
   void setup(int) override;
   void initial_integrate(int) override;
   void final_integrate() override;
+  void write_restart(FILE *) override;
+  void restart(char *) override;
   void reset_dt() override;
 
  protected:
@@ -47,7 +49,7 @@ class FixNHMiddle : public FixNH {
   void integrate_press_thermostat();
   void langevin_temp();
   void langevin_press();
-  void nh_omega_dot_middle();
+  void update_omega_dot();
   void parse_middle_args(int, char **);
   void apply_zero_dof_mode();
   void update_langevin_coefficients();

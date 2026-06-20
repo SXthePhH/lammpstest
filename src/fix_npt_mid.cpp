@@ -13,6 +13,7 @@
 
 #include "fix_npt_mid.h"
 
+#include "error.h"
 #include "modify.h"
 
 using namespace LAMMPS_NS;
@@ -21,6 +22,9 @@ using namespace LAMMPS_NS;
 
 FixNPTMid::FixNPTMid(LAMMPS *lmp, int narg, char **arg) : FixNHMiddle(lmp, narg, arg)
 {
+  if (!tstat_flag) error->all(FLERR, "Temperature control must be used with fix npt/mid");
+  if (!pstat_flag) error->all(FLERR, "Pressure control must be used with fix npt/mid");
+
   // create a new compute temp style
   // id = fix-ID + temp
   // compute group = all since pressure is always global (group all)

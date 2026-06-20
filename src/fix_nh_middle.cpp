@@ -21,6 +21,7 @@
 #include "error.h"
 #include "force.h"
 #include "kspace.h"
+#include "memory.h"
 #include "random_mars.h"
 #include "update.h"
 
@@ -90,6 +91,84 @@ FixNHMiddle::FixNHMiddle(LAMMPS *lmp, int narg, char **arg, ArgList &&filtered) 
 FixNHMiddle::~FixNHMiddle()
 {
   delete random;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixNHMiddle::write_restart(FILE *fp)
+{
+  int base_size = size_restart_global();
+  constexpr int prng_size = 103;
+  int nsize = base_size + 8 + prng_size;
+
+  double *list;
+  memory->create(list, nsize, "nh_middle:list");
+  int n = pack_restart_data(list);
+
+  list[n++] = integrator;
+  list[n++] = nh_temp_flag;
+  list[n++] = nh_press_flag;
+  list[n++] = seed;
+  list[n++] = zero_flag;
+  list[n++] = damp_t;
+  list[n++] = damp_p;
+  list[n++] = mtk_term2;
+
+  double rng_state[prng_size];
+  random->get_state(rng_state);
+  for (int i = 0; i < prng_size; ++i) list[n++] = rng_state[i];
+
+  if (comm->me == 0) {
+    int size = n * sizeof(double);
+    fwrite(&size, sizeof(int), 1, fp);
+    fwrite(list, sizeof(double), n, fp);
+  }
+
+  memory->destroy(list);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixNHMiddle::restart(char *buf)
+{
+  FixNH::restart(buf);
+
+  auto *list = (double *) buf;
+  int n = 0;
+
+  int flag = static_cast<int>(list[n++]);
+  if (flag) {
+    int m = static_cast<int>(list[n++]);
+    n += 2 * m;
+  }
+
+  flag = static_cast<int>(list[n++]);
+  if (flag) {
+    n += 12;    // omega + omega_dot
+    n += 2;     // vol0 + t0
+    int m = static_cast<int>(list[n++]);
+    n += 2 * m;    // etap + etap_dot
+    flag = static_cast<int>(list[n++]);
+    if (flag) n += 6;    // h0_inv
+    flag = static_cast<int>(list[n++]);
+    if (flag) n += 4;    // p_isoch + vol_start
+  }
+
+  integrator = static_cast<int>(list[n++]);
+  nh_temp_flag = static_cast<int>(list[n++]);
+  nh_press_flag = static_cast<int>(list[n++]);
+  seed = static_cast<int>(list[n++]);
+  zero_flag = static_cast<int>(list[n++]);
+  damp_t = list[n++];
+  damp_p = list[n++];
+  mtk_term2 = list[n++];
+
+  gamma_t = (damp_t > 0.0) ? 1.0 / damp_t : 0.0;
+  gamma_p = (damp_p > 0.0) ? 1.0 / damp_p : 0.0;
+
+  delete random;
+  random = new RanMars(lmp, seed);
+  random->set_state(list + n);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -256,7 +335,8 @@ void FixNHMiddle::update_langevin_coefficients()
     lan_c1_p = exp(-gamma_p * dt);
     lan_c1_p_2 = exp(-gamma_p * dt2);
 
-    double denom = (pstyle == ISO && pdim > 0) ? pdim : 1.0;  // shared iso kick uses variance / pdim
+    // shared iso kick uses variance / pdim
+    double denom = (pstyle == ISO && pdim > 0) ? pdim : 1.0;
     lan_c2_p = sqrt((1.0 - lan_c1_p * lan_c1_p) * boltz * t_target / denom);
     lan_c2_p_2 = sqrt((1.0 - lan_c1_p_2 * lan_c1_p_2) * boltz * t_target / denom);
   }
@@ -310,7 +390,7 @@ void FixNHMiddle::initial_integrate_side()
 
   if (pstat_flag) {
     compute_press_target();
-    nh_omega_dot_middle();
+    update_omega_dot();
     nh_v_press();
   }
 
@@ -348,7 +428,7 @@ void FixNHMiddle::final_integrate_side()
     pressure->addstep(update->ntimestep+1);
   }
 
-  if (pstat_flag) nh_omega_dot_middle();
+  if (pstat_flag) update_omega_dot();
 
   integrate_temp_thermostat();
   integrate_press_thermostat();
@@ -389,7 +469,7 @@ void FixNHMiddle::initial_integrate(int /*vflag*/)
 
   if (pstat_flag) {
     compute_press_target();
-    nh_omega_dot_middle();
+    update_omega_dot();
   }
 
   if (pstat_flag) remap();
@@ -430,7 +510,7 @@ void FixNHMiddle::final_integrate()
     pressure->addstep(update->ntimestep+1);
   }
 
-  if (pstat_flag) nh_omega_dot_middle();
+  if (pstat_flag) update_omega_dot();
 }
 
 /* ----------------------------------------------------------------------
@@ -439,8 +519,9 @@ void FixNHMiddle::final_integrate()
 
 void FixNHMiddle::langevin_temp()
 {
-  double lan_coeff1 = (integrator == MIDDLE) ? lan_c1_t : lan_c1_t_2;  // full O-step for middle, half O-step for side
-  double lan_coeff2 = (integrator == MIDDLE) ? lan_c2_t : lan_c2_t_2;  // matching noise amplitude for the selected step size
+  // full O-step for middle, half O-step for side
+  double lan_coeff1 = (integrator == MIDDLE) ? lan_c1_t : lan_c1_t_2;
+  double lan_coeff2 = (integrator == MIDDLE) ? lan_c2_t : lan_c2_t_2;
   double **v = atom->v;
   double *mass = atom->mass;
   double *rmass = atom->rmass;
@@ -489,8 +570,9 @@ void FixNHMiddle::langevin_temp()
 
 void FixNHMiddle::langevin_press()
 {
-  double lan_coeff1 = (integrator == MIDDLE) ? lan_c1_p : lan_c1_p_2;  // full O-step for middle, half O-step for side
-  double lan_coeff2 = (integrator == MIDDLE) ? lan_c2_p : lan_c2_p_2;  // matching noise amplitude for omega_dot
+  // full O-step for middle, half O-step for side
+  double lan_coeff1 = (integrator == MIDDLE) ? lan_c1_p : lan_c1_p_2;
+  double lan_coeff2 = (integrator == MIDDLE) ? lan_c2_p : lan_c2_p_2;
   double kicks[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
   if (comm->me == 0) {
@@ -524,12 +606,13 @@ void FixNHMiddle::langevin_press()
 }
 
 /* ----------------------------------------------------------------------
-   barostat force update matching fix_nh_new middle behavior
+   barostat force update matching fix_nh_middle middle behavior
 ------------------------------------------------------------------------- */
 
-void FixNHMiddle::nh_omega_dot_middle()
+void FixNHMiddle::update_omega_dot()
 {
-  double volume = (dimension == 3) ? domain->xprd*domain->yprd*domain->zprd : domain->xprd*domain->yprd;  // 3d volume, 2d area
+  double volume = (dimension == 3) ? domain->xprd * domain->yprd * domain->zprd :
+                                     domain->xprd * domain->yprd;
   if (deviatoric_flag) compute_deviatoric();
 
   mtk_term1 = 0.0;
@@ -545,9 +628,10 @@ void FixNHMiddle::nh_omega_dot_middle()
 
   for (int i = 0; i < 3; i++)
     if (p_flag[i]) {
-      double f_omega = (p_current[i]-p_hydro)*volume / (omega_mass[i] * nktv2p) + mtk_term1 / omega_mass[i];
-      if (deviatoric_flag) f_omega -= fdev[i]/(omega_mass[i] * nktv2p);
-      omega_dot[i] += f_omega*dthalf;
+      double f_omega = (p_current[i] - p_hydro) * volume / (omega_mass[i] * nktv2p) +
+          mtk_term1 / omega_mass[i];
+      if (deviatoric_flag) f_omega -= fdev[i] / (omega_mass[i] * nktv2p);
+      omega_dot[i] += f_omega * dthalf;
       omega_dot[i] *= pdrag_factor;
     }
 

@@ -136,6 +136,7 @@ parenthesis: g = GPU, i = INTEL, k = KOKKOS, o = OPENMP, t = OPT.
    * :doc:`nph/asphere (o) <fix_nph_asphere>`
    * :doc:`nph/body <fix_nph_body>`
    * :doc:`nph/eff <fix_nh_eff>`
+   * :doc:`nph/mid <fix_nh_mid>`
    * :doc:`nph/sphere (ko) <fix_nph_sphere>`
    * :doc:`nphug <fix_nphug>`
    * :doc:`npt (giko) <fix_nh>`
@@ -143,6 +144,7 @@ parenthesis: g = GPU, i = INTEL, k = KOKKOS, o = OPENMP, t = OPT.
    * :doc:`npt/body <fix_npt_body>`
    * :doc:`npt/cauchy <fix_npt_cauchy>`
    * :doc:`npt/eff <fix_nh_eff>`
+   * :doc:`npt/mid <fix_nh_mid>`
    * :doc:`npt/sphere (ko) <fix_npt_sphere>`
    * :doc:`npt/uef <fix_nh_uef>`
    * :doc:`numdiff <fix_numdiff>`
@@ -168,6 +170,7 @@ parenthesis: g = GPU, i = INTEL, k = KOKKOS, o = OPENMP, t = OPT.
    * :doc:`nvt/body <fix_nvt_body>`
    * :doc:`nvt/eff <fix_nh_eff>`
    * :doc:`nvt/manifold/rattle <fix_nvt_manifold_rattle>`
+   * :doc:`nvt/mid <fix_nh_mid>`
    * :doc:`nvt/sllod (iko) <fix_nvt_sllod>`
    * :doc:`nvt/sllod/eff <fix_nvt_sllod_eff>`
    * :doc:`nvt/sphere (ko) <fix_nvt_sphere>`

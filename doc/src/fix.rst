@@ -314,6 +314,7 @@ accelerated styles exist.
 * :doc:`nph/asphere <fix_nph_asphere>` - NPH for aspherical particles
 * :doc:`nph/body <fix_nph_body>` - NPH for body particles
 * :doc:`nph/eff <fix_nh_eff>` - NPH for  nuclei and electrons in the electron force field model
+* :doc:`nph/mid <fix_nh_mid>` - NPH time integration with middle-scheme ordering
 * :doc:`nph/sphere <fix_nph_sphere>` - NPH for spherical particles
 * :doc:`nphug <fix_nphug>` - constant-stress Hugoniostat integration
 * :doc:`npt <fix_nh>` - constant NPT time integration via Nose/Hoover
@@ -321,6 +322,7 @@ accelerated styles exist.
 * :doc:`npt/body <fix_npt_body>` - NPT for body particles
 * :doc:`npt/cauchy <fix_npt_cauchy>` - NPT with Cauchy stress
 * :doc:`npt/eff <fix_nh_eff>` - NPT for  nuclei and electrons in the electron force field model
+* :doc:`npt/mid <fix_nh_mid>` - NPT time integration with middle-scheme ordering
 * :doc:`npt/sphere <fix_npt_sphere>` - NPT for spherical particles
 * :doc:`npt/uef <fix_nh_uef>` - NPT style time integration with diagonal flow
 * :doc:`numdiff <fix_numdiff>` - numerically approximate atomic forces using finite energy differences
@@ -346,6 +348,7 @@ accelerated styles exist.
 * :doc:`nvt/body <fix_nvt_body>` - NVT for body particles
 * :doc:`nvt/eff <fix_nh_eff>` - NVE for  nuclei and electrons in the electron force field model
 * :doc:`nvt/manifold/rattle <fix_nvt_manifold_rattle>` - NVT time integration for atoms constrained to a curved surface (manifold)
+* :doc:`nvt/mid <fix_nh_mid>` - NVT time integration with middle-scheme ordering
 * :doc:`nvt/sllod <fix_nvt_sllod>` - NVT for NEMD with SLLOD equations
 * :doc:`nvt/sllod/eff <fix_nvt_sllod_eff>` - NVT for NEMD with SLLOD equations for the electron force field model
 * :doc:`nvt/sphere <fix_nvt_sphere>` - NVT for spherical particles

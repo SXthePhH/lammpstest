@@ -437,7 +437,8 @@ TEST(FixTimestep, plain)
     // rigid fixes need work to test properly with r-RESPA.
     // fix nve/limit cannot work with r-RESPA
     ifix = lmp->modify->get_fix_by_id("test");
-    if (ifix && !utils::strmatch(ifix->style, "^rigid") &&
+    if (ifix && !test_config.skip_tests.count("respa") &&
+        !utils::strmatch(ifix->style, "^rigid") &&
         !utils::strmatch(ifix->style, "^nve/limit") && !utils::strmatch(ifix->style, "^recenter")) {
         if (!verbose) ::testing::internal::CaptureStdout();
         cleanup_lammps(lmp, test_config);
@@ -749,7 +750,8 @@ TEST(FixTimestep, omp)
     // rigid fixes need work to test properly with r-RESPA,
     // also, torque is not supported by respa/omp
     ifix = lmp->modify->get_fix_by_id("test");
-    if (ifix && !utils::strmatch(ifix->style, "^rigid") && !lmp->atom->torque) {
+    if (ifix && !test_config.skip_tests.count("respa") &&
+        !utils::strmatch(ifix->style, "^rigid") && !lmp->atom->torque) {
 
         if (!verbose) ::testing::internal::CaptureStdout();
         cleanup_lammps(lmp, test_config);
